@@ -175,12 +175,19 @@ type serverConfigResolverHTTPS struct {
 	Insecure bool          `mapstructure:"insecure"`
 }
 
+type serverConfigResolverQUIC struct {
+	Addr     string `mapstructure:"addr"`
+	Sni      string `mapstructure:"sni"`
+	Insecure bool   `mapstructure:"insecure"`
+}
+
 type serverConfigResolver struct {
 	Type  string                    `mapstructure:"type"`
 	TCP   serverConfigResolverTCP   `mapstructure:"tcp"`
 	UDP   serverConfigResolverUDP   `mapstructure:"udp"`
 	TLS   serverConfigResolverTLS   `mapstructure:"tls"`
 	HTTPS serverConfigResolverHTTPS `mapstructure:"https"`
+	QUIC  serverConfigResolverQUIC  `mapstructure:"quic"`
 }
 
 type serverConfigSniff struct {
@@ -695,6 +702,15 @@ func (c *serverConfig) fillOutboundConfig(hyConfig *server.Config) error {
 			return configError{Field: "resolver.https.addr", Err: errors.New("empty resolver address")}
 		}
 		uOb = outbounds.NewDoHResolver(c.Resolver.HTTPS.Addr, c.Resolver.HTTPS.Timeout, c.Resolver.HTTPS.SNI, c.Resolver.HTTPS.Insecure, uOb)
+	case "quic":
+		if c.Resolver.QUIC.Addr == "" {
+			return configError{Field: "resolver.quic.addr", Err: errors.New("empty resolver address")}
+		}
+		var err error
+		uOb, err = outbounds.NewDOQResolver(c.Resolver.QUIC.Addr, c.Resolver.QUIC.Sni, c.Resolver.QUIC.Insecure, uOb)
+		if err != nil {
+			return configError{Field: "resolver.quic", Err: err}
+		}
 	default:
 		return configError{Field: "resolver.type", Err: errors.New("unsupported resolver type")}
 	}
